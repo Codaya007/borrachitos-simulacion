@@ -1,0 +1,265 @@
+import matplotlib
+import matplotlib.pyplot as plt
+import random
+import time
+import tkinter as tk
+from tkinter import ttk
+
+TIEMPO_VIDA_INICIAL=5
+
+def move_figure(f, x, y):
+    """Move figure's upper left corner to pixel (x, y)"""
+    backend = matplotlib.get_backend()
+    if backend == 'TkAgg':
+        f.canvas.manager.window.wm_geometry("+%d+%d" % (x, y))
+    elif backend == 'WXAgg':
+        f.canvas.manager.window.SetPosition((x, y))
+    else:
+        # This works for QT and GTK
+        # You can also use window.setGeometry
+        f.canvas.manager.window.move(x, y)
+
+def generar_movimiento(currentX, currentY):
+    # Generar un movimiento aleatorio en x o y (1 unidad a la vez)
+    
+    eje = random.choice(['x', 'y'])
+    direccion = 1
+    # Una vez generado el eje, debo determinar la dirección
+    # Si el eje es x y el punto actual es 1, solo puede aumentar
+    # Si el eje es x y el punto actual es 9, solo puede disminuir
+    # Si no es ninguno, puede aumentar o disminuir
+    # Lo mismo para 'y'
+    if((eje == "x" and currentX == 1) or (eje == "y" and currentY == 1)):
+        direccion = 1
+    elif((eje == "x" and currentX == 9) or (eje == "y" and currentY == 9)):
+        direccion = -1
+    else:
+      direccion = random.choice([1, -1])
+    
+    # determino los movimientos que puede dar el punto, puede moverse 1 paso tanto vertical como horizontalmente
+    mov_random = 1 * direccion
+    
+    if eje == 'x':
+        return mov_random, 0
+    else:
+        y = 1 * direccion
+        return 0, mov_random
+
+def punto_repetido(coordenadas, nuevo_punto):
+    # Verificar si el nuevo punto ya existe en las coordenadas
+    return nuevo_punto in coordenadas
+
+# pasos_vida = TIEMPO_VIDA_INICIAL
+tiempo_vida_inicial = int(input("Ingrese el número de pasos: "))
+ejecuciones = int(input("Veces que desea ejecutar: "))
+resultados=[]
+
+for i in range(ejecuciones):
+    pasos_vida = tiempo_vida_inicial
+    plt.ion()  # Habilitar el modo interactivo
+
+    x = 2
+    y = 1
+    # x = random.randint(1, 9)
+    # y = random.randint(1, 9)
+
+    # # Punto de recarga de comida
+    # xComida = random.randint(1, 9)
+    # yComida = random.randint(1, 9)
+
+    # # Punto de recarga de comida
+    # xLlegada = random.randint(1, 9)
+    # yLlegada = random.randint(1, 9)
+
+    # print(f"x={x} y={y}")
+
+    xComida = 3
+    yComida = 4
+    xLlegada = 5
+    yLlegada = 4
+
+    # Crear la figura y los ejes
+    fig, ax = plt.subplots()
+
+    move_figure(fig, 600, 500)
+
+    # Dibujar puntos
+    # ax.scatter(x=[x], y=[y])
+    ax.scatter(x=[x], y=[y], color='red')  # Punto inicial en rojo
+    ax.scatter(x=[xLlegada], y=[yLlegada], color='blue')  # Punto de llegada en azul
+    ax.scatter(x=[xComida], y=[yComida], color='green')  # Punto de comida en verde
+
+    ax.text(xLlegada + 0.5, yLlegada + 0.5, "CASA", ha='center', va='center', fontsize=8, bbox=dict(facecolor='white', alpha=0.7))
+    ax.text(xComida + 0.5, yComida + 0.5, "COMIDA", ha='center', va='center', fontsize=8, bbox=dict(facecolor='white', alpha=0.7))
+
+    # Establecer el tamaño del gráfico en 10x10 pulgadas
+    fig.set_size_inches(6, 6)
+
+    # Establecer los límites de los ejes
+    ax.set_xlim(0, 10)
+    ax.set_ylim(0, 10)
+
+    # Especificar los ticks de los ejes de 1 en 1
+    ax.set_xticks(range(11))
+    ax.set_yticks(range(11))
+
+    # Añadir cuadrícula
+    ax.grid(True)
+
+    # Añadir título al gráfico completo
+    plt.suptitle('SIMULACIÓN DEL BORRACHO')
+    
+    plt.title(f'EJECUCIÓN {i+1}')
+
+    # Guardar el gráfico en formato png
+    # plt.savefig('diagrama-dispersion.png')
+    # Mostrar el gráfico
+    # plt.show()
+
+    x0 = x
+    y0 = y
+    x1 = x
+    y1 = y
+
+    # punto_inicial = [x, y]
+    # punto_final=[x1, y1]
+    coordenadas = [(x, y)]
+    llego = False
+    pasosTotales = 0
+    pasoComida = 0
+
+    print(f"EJECUCIÓN {i + 1}")
+
+    while (~llego and pasos_vida >= 1):
+        # for i in range(pasos_vida):
+        # Esperar 1 segundo
+        time.sleep(2)
+
+        # El punto anterior ahora es el punto inicial
+        x0, y0 = x1, y1
+
+        intentos_punto_no_repetido = 0
+        while True:
+            print("recalculando punto...")
+            # Generar movimiento
+            dx, dy = generar_movimiento(x0, y0)
+
+            # Actualizo las nuevas coordenadas
+            x1 = x0 + dx
+            y1 = y0 + dy
+
+            # Verificar si el nuevo punto ya existe en las coordenadas
+            if not punto_repetido(coordenadas, (x1, y1)):
+                break
+            intentos_punto_no_repetido += 1
+
+            if(intentos_punto_no_repetido > 10):
+                break
+
+        pasosTotales+=1
+
+        # le quito un paso
+        pasos_vida -= 1 
+        # Añadir las nuevas coordenadas al registro para que no se repitan los puntos, pero solo no deben repetirse los últimos 3 puntos
+        coordenadas.append((x1, y1))
+        coordenadas = coordenadas[-4:]
+
+        # Dibujo la línea entre los puntos
+        ax.plot([x0, x1], [y0, y1], color='red')
+
+        # print(f"Paso {pasosTotales}: x={x1} y={y1}")
+
+        # Actualizar la figura
+        fig.canvas.draw_idle()
+        
+        # Hacer una pausa para permitir que la interfaz gráfica se actualice
+        plt.pause(0.02)
+
+        # Si el punto nuevo es un punto de comida, el tiempo de vida se resetea a 5
+        if (yComida == y1 and xComida == x1):
+            pasos_vida = tiempo_vida_inicial
+            pasoComida += 1
+
+        print(f"PASOS RESTANTES: {pasos_vida}")
+
+        # Si el punto nuevo es un punto de llegada, se actualiza la bandera diciendo que llegó
+        if (yLlegada == y1 and xLlegada == x1):
+            llego = True
+            break
+    # print(f"Bandera llegó: {llego}")
+
+    if(not llego):
+        ax.text(4, 9.5, "Se quedó dormido", ha='center', va='center', fontsize=12, bbox=dict(facecolor='white', alpha=0.7))
+
+        print("MURIÓ :c")
+    else:
+        ax.text(4, 9.5, "Llegó a casa", ha='center', va='center', fontsize=12, bbox=dict(facecolor='white', alpha=0.7))
+
+        print("LLEGÓ AL PUNTO")
+    
+    print(f"TERMINA EJECUCIÓN {i + 1}")
+    resultados.append({'ejecucion': i+1,  'llego': llego, 'pasosTotales': pasosTotales, 'pasoComida': pasoComida })
+
+    # Esperar durante x segundos (por ejemplo, 5 segundos)
+    tiempo_espera = 4
+    plt.pause(tiempo_espera)
+
+    # Cerrar la figura al finalizar
+    plt.ioff()  # Deshabilitar el modo interactivo
+    # plt.show()
+
+    # Cerrar el gráfico
+    plt.close()
+
+# Variables para el resumen
+veces_llego = sum(1 for resultado in resultados if resultado['llego'])
+veces_no_llego = ejecuciones - veces_llego
+
+# # Mostrar el resumen
+# print("Resumen de ejecuciones:")
+# print(f"Veces que llegó: {veces_llego}")
+# print(f"Veces que no llegó: {veces_no_llego}")
+# print(f"Total de ejecuciones: {ejecuciones}")
+# print(f"Porcentaje de éxito: {veces_llego / ejecuciones * 100:.2f}%")
+
+#! MUESTRO RESUMEN EN UNA VENTANA
+ventana = tk.Tk()
+ventana.title("Resumen de ejecuciones")
+
+# print(resultados)
+
+# Crear un mensaje con la información
+mensaje = f"Total de ejecuciones: {ejecuciones}\nTiempo de vida: {tiempo_vida_inicial}\nVeces que llegó: {veces_llego}\nVeces que no llegó: {veces_no_llego}\nPorcentaje de éxito: {veces_llego / ejecuciones * 100:.2f}%"
+
+# Ajustar el tamaño de la ventana y centrarla
+ancho_ventana = 650
+altura_ventana = 400
+x_pos = (ventana.winfo_screenwidth() - ancho_ventana) // 2
+y_pos = (ventana.winfo_screenheight() - altura_ventana) // 2
+ventana.geometry(f"{ancho_ventana}x{altura_ventana}+{x_pos}+{y_pos}")
+
+# Crear un widget de etiqueta para mostrar el mensaje
+etiqueta_mensaje = tk.Label(ventana, text=mensaje, font=("Arial", 12))
+etiqueta_mensaje.pack(padx=20, pady=10)  # Ajusta el relleno según sea necesario
+
+# Crear un Treeview para mostrar la tabla
+tabla = ttk.Treeview(ventana, columns=("N° ejecución", "Llegó", "Pasos realizados", "Veces comió"), show="headings")
+tabla.heading("N° ejecución", text="N° ejecución")
+tabla.heading("Llegó", text="Llegó")
+tabla.heading("Pasos realizados", text="Pasos realizados")
+tabla.heading("Veces comió", text="Veces comió")
+
+# Insertar filas en la tabla
+for resultado in resultados:
+    llego_texto = "Sí" if resultado['llego'] else "No"
+    tabla.insert("", "end", values=(resultado['ejecucion'], llego_texto, resultado['pasosTotales'], resultado['pasoComida'], ))
+
+# Ajustar el tamaño de las columnas
+for columna in ("N° ejecución", "Llegó", "Pasos realizados", "Veces comió"):
+    tabla.column(columna, width=150, anchor="center")
+
+# Empaquetar la tabla en la ventana
+tabla.pack(padx=20, pady=10)
+
+# Iniciar el bucle de la interfaz gráfica
+ventana.mainloop()

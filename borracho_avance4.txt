@@ -1,0 +1,376 @@
+import matplotlib
+import matplotlib.pyplot as plt
+import random
+import time
+import tkinter as tk
+from tkinter import ttk
+
+
+def generar_color_hexadecimal():
+    """
+    Genera un color hexadecimal aleatorio.
+
+    Returns:
+        str: Código hexadecimal del color generado.
+    """
+    # Generar valores aleatorios para los componentes RGB
+    r = random.randint(0, 255)
+    g = random.randint(0, 255)
+    b = random.randint(0, 255)
+
+    # Formar el código hexadecimal del color
+    color_hex = "#{:02x}{:02x}{:02x}".format(r, g, b)
+
+    return color_hex
+
+
+def move_figure(f, x, y):
+    """Move figure's upper left corner to pixel (x, y)"""
+    backend = matplotlib.get_backend()
+    if backend == 'TkAgg':
+        f.canvas.manager.window.wm_geometry("+%d+%d" % (x, y))
+    elif backend == 'WXAgg':
+        f.canvas.manager.window.SetPosition((x, y))
+    else:
+        # This works for QT and GTK
+        # You can also use window.setGeometry
+        f.canvas.manager.window.move(x, y)
+
+
+def generar_movimiento(currentX, currentY):
+    # Generar un movimiento aleatorio en x o y (1 unidad a la vez)
+
+    eje = random.choice(['x', 'y'])
+    direccion = 1
+    # Una vez generado el eje, debo determinar la dirección
+    # Si el eje es x y el punto actual es 1, solo puede aumentar
+    # Si el eje es x y el punto actual es 9, solo puede disminuir
+    # Si no es ninguno, puede aumentar o disminuir
+    # Lo mismo para 'y'
+    if ((eje == "x" and currentX == 1) or (eje == "y" and currentY == 1)):
+        direccion = 1
+    elif ((eje == "x" and currentX == 9) or (eje == "y" and currentY == 9)):
+        direccion = -1
+    else:
+        direccion = random.choice([1, -1])
+
+    # determino los movimientos que puede dar el punto, puede moverse 1 paso tanto vertical como horizontalmente
+    mov_random = 1 * direccion
+
+    if eje == 'x':
+        return mov_random, 0
+    else:
+        y = 1 * direccion
+        return 0, mov_random
+
+
+def punto_repetido(coordenadas, nuevo_punto):
+    # Verificar si el nuevo punto ya existe en las coordenadas
+    return nuevo_punto in coordenadas
+
+
+def crear_matriz_vacia(filas):
+    return [[] for _ in range(filas)]
+
+
+def generate_random_cordinate():
+    x = random.randint(1, 9)
+    y = random.randint(1, 9)
+
+    return [x, y]
+
+
+def mostrar_resumen_total(resultados, ejecuciones):
+    ventana = tk.Tk()
+    ventana.title("RESUMEN FINAL DE EJECUCIONES")
+
+    # Ajustar el tamaño de la ventana y centrarla
+    ancho_ventana = 650
+    altura_ventana = 400
+    x_pos = (ventana.winfo_screenwidth() - ancho_ventana) // 2
+    y_pos = (ventana.winfo_screenheight() - altura_ventana) // 2
+    ventana.geometry(f"{ancho_ventana}x{altura_ventana}+{x_pos}+{y_pos}")
+
+    # Crear un Treeview para mostrar la tabla v2
+    tabla = ttk.Treeview(ventana, columns=(
+        "Borrachito", "Intentos",  "Veces llegó", "Porcentaje éxito"), show="headings")
+    tabla.heading("Borrachito", text="Borrachito")
+    tabla.heading("Intentos", text="Intentos")
+    tabla.heading("Veces llegó", text="Veces llegó")
+    tabla.heading("Porcentaje éxito", text="Porcentaje éxito")
+
+    estadisticas = []
+    total_intentos = ejecuciones
+
+    for persona in resultados:
+        llegadas_exitosas = sum(intento['llego'] for intento in persona)
+        porcentaje_exito = (llegadas_exitosas / total_intentos) * \
+            100 if total_intentos != 0 else 0
+
+        estadisticas.append(
+            {'llegadas_exitosas': llegadas_exitosas, 'porcentaje_exito': porcentaje_exito})
+
+    # Insertar filas en la tabla
+    for resultado, estadistica in zip(informacion_borrachitos, estadisticas):
+        tabla.insert("", "end", values=(resultado['i'], len(
+            resultado), estadistica['llegadas_exitosas'], estadistica['porcentaje_exito']))
+
+    # Ajustar el tamaño de las columnas
+    for columna in ("Borrachito", "Intentos",  "Veces llegó", "Porcentaje éxito"):
+        tabla.column(columna, width=150, anchor="center")
+
+    # Empaquetar la tabla en la ventana
+    tabla.pack(padx=20, pady=10)
+
+    # Iniciar el bucle de la interfaz gráfica
+    ventana.mainloop()
+
+
+def mostrar_ventana_ejecucion_borrachos(informacion_borrachitos):
+    ventana = tk.Tk()
+    ventana.title("Resumen de ejecución")
+
+    # Ajustar el tamaño de la ventana y centrarla
+    ancho_ventana = 650
+    altura_ventana = 400
+    x_pos = (ventana.winfo_screenwidth() - ancho_ventana) // 2
+    y_pos = (ventana.winfo_screenheight() - altura_ventana) // 2
+    ventana.geometry(f"{ancho_ventana}x{altura_ventana}+{x_pos}+{y_pos}")
+
+    # Crear un Treeview para mostrar la tabla v2
+    tabla = ttk.Treeview(ventana, columns=(
+        "Borrachito", "Llegó", "Comió", "Pasos totales"), show="headings")
+    tabla.heading("Borrachito", text="Borrachito")
+    tabla.heading("Llegó", text="Llegó")
+    tabla.heading("Comió", text="Comió")
+    tabla.heading("Pasos totales", text="Pasos totales")
+
+    # Insertar filas en la tabla
+    for resultado in informacion_borrachitos:
+        comio_texto = "Sí" if resultado['vecesComio'] > 0 else "No"
+        tabla.insert("", "end", values=(
+            resultado['i'], resultado['llego'], comio_texto, resultado['pasosTotales'], ))
+
+    # Ajustar el tamaño de las columnas
+    for columna in ("Borrachito", "Llegó", "Comió", "Pasos totales"):
+        tabla.column(columna, width=150, anchor="center")
+
+    # Empaquetar la tabla en la ventana
+    tabla.pack(padx=20, pady=10)
+
+    # Iniciar el bucle de la interfaz gráfica
+    ventana.mainloop()
+
+
+def validar_coordenadas(xComida, yComida, xLlegada, yLlegada):
+    # Desempaquetar las coordenadas
+    coordenadas = generate_random_cordinate()
+    [x, y] = coordenadas
+
+    # Validar que las coordenadas no coincidan con el punto de comida ni el de llegada
+    while (x == xComida and y == yComida) or (x == xLlegada and y == yLlegada):
+        # Generar nuevas coordenadas
+        coordenadas = generate_random_cordinate()
+        x, y = coordenadas
+
+    return coordenadas
+
+
+tiempo_vida_inicial = int(input("Ingrese el número de pasos: "))
+ejecuciones = int(input("Veces que desea ejecutar: "))
+n_borrachitos = int(input("Numero de borrachitos: "))
+
+TIEMPO_VIDA_INICIAL = 5
+PUNTOS_NO_REPETIR = 5
+resultados = crear_matriz_vacia(n_borrachitos)
+ESPACIO_POR_BORRACHO = 9/n_borrachitos + 0.5
+
+for ejecucion in range(ejecuciones):
+    #! Inicialización variables importantes
+    informacion_borrachitos = []  # Aquí van todos los detalles de los borrachitos
+    llegaron = 0
+    murieron = 0
+    xComida = 3
+    yComida = 4
+    xLlegada = 5
+    yLlegada = 4
+
+    #! Inicialización de la gráfica de ejecución actual
+    plt.ion()  # Habilitar el modo interactivo
+
+    # Crear la figura y los ejes
+    fig, ax = plt.subplots()
+
+    move_figure(fig, 600, 500)
+
+    # Establecer el tamaño del gráfico en 6x6 pulgadas
+    fig.set_size_inches(6, 6)
+
+    # Establecer los límites de los ejes
+    ax.set_xlim(0, 10)
+    ax.set_ylim(0, 10)
+
+    # Especificar los ticks de los ejes de 1 en 1
+    ax.set_xticks(range(11))
+    ax.set_yticks(range(11))
+
+    # Añadir cuadrícula
+    ax.grid(True)
+
+    # Añadir título al gráfico completo
+    plt.suptitle('SIMULACIÓN DE BORRACHITOS')
+
+    plt.title(f'EJECUCIÓN {ejecucion + 1}')
+    print(f"EJECUCIÓN {ejecucion + 1}")
+
+    #! Dibujo los puntos de llegada y de comida y pongo etiquetas
+    # Punto de llegada en azul
+    ax.scatter(x=[xLlegada], y=[yLlegada], color='blue')
+    # Punto de comida en verde
+    puntoComida = ax.scatter(x=[xComida], y=[yComida], color='green')
+
+    ax.text(xLlegada + 0.5, yLlegada + 0.5, "CASA", ha='center',
+            va='center', fontsize=8, bbox=dict(facecolor='white', alpha=0.7))
+    textoComida = ax.text(xComida + 0.5, yComida + 0.5, "COMIDA", ha='center',
+                          va='center', fontsize=8, bbox=dict(facecolor='white', alpha=0.7))
+
+    #! Inicializo los borrachos
+    for i in range(n_borrachitos):
+        # ? Valida que la coordenada de inicio no pueda ser el punto de comida o llegada
+        [x, y] = validar_coordenadas(xComida, yComida, xLlegada, yLlegada)
+
+        # ? Pinto punto inicial de borrachito i en rojo
+        ax.scatter(x=[x], y=[y], color='red')
+        ax.text(x + 0.5, y + 0.5, "B" + str(i + 1), ha='center',
+                va='center', fontsize=8, bbox=dict(facecolor='white', alpha=0.7))
+
+        color = generar_color_hexadecimal()
+
+        # ? Añado toda la información del estado del borracho
+        informacion_borrachitos.append({
+            "i": i + 1,
+            'posicionActual': [x, y],
+            'llego': False,
+            'tiempoVida': tiempo_vida_inicial,
+            'coordenadas': [[x, y]],
+            # 'posicionAnterior': [x, y],
+            'vecesComio': 0,
+            'pasosTotales': 0,
+            'color': color
+        })
+
+    # Guardar el gráfico en formato png
+    # plt.savefig('diagrama-dispersion.png')
+
+    #! Mientras todos los borrachos no estén muertos o hayan llegado, sigo generando puntos
+    while ((llegaron == 0) and (murieron != n_borrachitos)):
+        # Esperar 0.5 segundo
+        time.sleep(0.5)
+
+        for i in range(n_borrachitos):
+            # ? Validacion: Si el borrachito actual ya llegó o ya se murió, lo ignoro
+            if (informacion_borrachitos[i]['llego'] or informacion_borrachitos[i]['tiempoVida'] <= 0):
+                continue
+
+            # ? El punto anterior ahora es el punto inicial
+            [x0, y0] = informacion_borrachitos[i]["posicionActual"]
+
+            intentos_punto_no_repetido = 0
+
+            # ? Intento generar un nuevo punto no repetido en los ultimos n movimientos
+            while True:
+                print("recalculando punto...")
+                # Generar movimiento
+                dx, dy = generar_movimiento(x0, y0)
+
+                # Actualizo las nuevas coordenadas
+                x1 = x0 + dx
+                y1 = y0 + dy
+
+                informacion_borrachitos[i]["posicionActual"][0] = x1
+                informacion_borrachitos[i]["posicionActual"][1] = y1
+
+                # Verifico si el nuevo punto ya existe en las coordenadas
+                if not punto_repetido(informacion_borrachitos[i]['coordenadas'], [x1, y1]):
+                    break
+
+                intentos_punto_no_repetido += 1
+
+                if (intentos_punto_no_repetido > 5):
+                    break
+
+            # Terminando el bucle, significa que se generó un nuevo paso válido en posicionActual
+            [x1, y1] = informacion_borrachitos[i]["posicionActual"]
+
+            # Pasos totales aumentan
+            informacion_borrachitos[i]["pasosTotales"] += 1
+
+            # Tiempo de vida disminuye
+            informacion_borrachitos[i]["tiempoVida"] -= 1
+
+            # Se añaden las nuevas coordenadas al registro para que no se repitan los puntos
+            informacion_borrachitos[i]["coordenadas"].append([x1, y1])
+            informacion_borrachitos[i]["coordenadas"] = informacion_borrachitos[i]["coordenadas"][-PUNTOS_NO_REPETIR:]
+
+            # Dibujo la línea entre los puntos
+            ax.plot([x0, x1], [y0, y1], informacion_borrachitos[i]['color'])
+
+            # Si el punto nuevo es un punto de comida, el tiempo de vida se resetea
+            if (yComida and yComida == y1 and xComida == x1):
+                informacion_borrachitos[i]["tiempoVida"] = tiempo_vida_inicial
+                informacion_borrachitos[i]["vecesComio"] += 1
+                #! Solo se puede comer una vez, luego de eso la comida desaparece
+                yComida = None
+                xComida = None
+
+                puntoComida.remove()
+                textoComida.remove()
+
+            print(
+                f"PASOS RESTANTES BORRACHITO {i + 1}: {informacion_borrachitos[i]['tiempoVida']}")
+
+            # Si el punto nuevo es un punto de llegada, se actualiza la bandera diciendo que llegó
+            if (yLlegada == y1 and xLlegada == x1):
+                informacion_borrachitos[i]['llego'] = True
+
+                llegaron += 1
+
+                # Muestro un texto informativo de q llegó a casa
+                ax.text((i * ESPACIO_POR_BORRACHO), 9.5, "B " + str(i + 1) + "Ganador!!!",
+                        ha='center', va='center', fontsize=8, bbox=dict(facecolor='white', alpha=0.7))
+
+                break
+
+            # Si ya no le quedan movimientos al borracho actual muestro un texto informativo de q murió
+            if (informacion_borrachitos[i]["tiempoVida"] <= 0):
+                murieron += 1
+                ax.text((i * ESPACIO_POR_BORRACHO), 9.5, "B" + str(i+1) + " se durmió",
+                        ha='center', va='center', fontsize=8, bbox=dict(facecolor='white', alpha=0.7))
+
+        # Actualizar la figura
+        fig.canvas.draw_idle()
+
+        # Hacer una pausa para permitir que la interfaz gráfica se actualice
+        plt.pause(2)
+
+        # print(informacion_borrachitos)
+
+    print(f"TERMINA EJECUCIÓN {ejecucion + 1}")
+
+    for i in range(n_borrachitos):
+        resultados[i].append(informacion_borrachitos[i])
+
+    # Esperar durante x segundos (por ejemplo, 5 segundos)
+    tiempo_espera = 5
+    plt.pause(tiempo_espera)
+
+    # Cerrar la figura al finalizar
+    plt.ioff()  # Deshabilitar el modo interactivo
+
+    # Cerrar el gráfico
+    plt.close()
+
+    mostrar_ventana_ejecucion_borrachos(informacion_borrachitos)
+
+mostrar_resumen_total(resultados, ejecuciones)
+print(resultados)
